@@ -1,6 +1,9 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.flowable = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 'use strict';
 const ProcessDefinitionsResource = require('./resources/process-definitions');
+const ProcessInstancesResource = require('./resources/process-instances');
+const TasksResource = require('./resources/tasks');
+const TaskVariablesResource = require('./resources/task-variables');
 const axios = require('axios');
 
 const flowableRestEndpoint = '/flowable-rest/service';
@@ -17,10 +20,10 @@ module.exports = function (options) {
 
     return {
         processDefinitions: new ProcessDefinitionsResource(options, httpClient),
-        processInstances: '',
-        processInstanceVariables: '',
-        tasks: '',
-        taskVariables: '',
+        processInstances: new ProcessInstancesResource(options, httpClient),
+        //processInstanceVariables: new ProcessInstanceVariablesResource(options, httpClient),
+        tasks: new TasksResource(options, httpClient),
+        taskVariables: new TaskVariablesResource(options, httpClient),
         options: options
     }
 };
@@ -32,37 +35,788 @@ function getBaseUrlWithCredentials(options) {
     const protocolLength = options.apiUri.startsWith('https://') ? 8 : 7;
     return options.apiUri.substr(0, protocolLength) + options.auth.username + ':' + options.auth.password + '@' + options.apiUri.substr(protocolLength);
 }
-},{"./resources/process-definitions":2,"axios":3}],2:[function(require,module,exports){
+},{"./resources/process-definitions":2,"./resources/process-instances":3,"./resources/task-variables":4,"./resources/tasks":5,"axios":6}],2:[function(require,module,exports){
 'use strict';
-
-//const http = require('./../http').http;
-const args = {
-    headers: {'content-type': 'application/json'}
-};
 
 const resourcePath = '/repository/process-definitions';
 
 function ProcessDefinitionsResource(options, http) {
 
+    /**
+     * List of process definitions
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
     this.getProcessDefinitions = (queryParams) => {
        return http.get(resourcePath,
             getRequestArgs(queryParams)
         );
     };
 
-    this.getProcessDefinitionById = (id) => {
-        return http.get(resourcePath + `/${id}`,
+    /**
+     * Get a process definition
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getProcessDefinitionById = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}`,
             getRequestArgs());
     };
 
-    this.executeAction = (id, action) => {
-        return http.put(resourcePath + `/${id}`,
+    /**
+     * Execute actions for a process definition
+     * @param processDefinitionId
+     * @param action
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.executeAction = (processDefinitionId, action) => {
+        return http.put(resourcePath + `/${processDefinitionId}`, action,
             getRequestArgs(null, action));
     };
 
-    this.getDecisionTables = (id) => {
-        return http.get(resourcePath + `/${id}/decision-tables`,
+    /**
+     * List decision tables for a process-definition
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getDecisionTables = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/decision-tables`,
             getRequestArgs());
+    };
+
+    /**
+     * List form definitions for a process-definition
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getFormDefinitions = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/form-definitions`,
+            getRequestArgs());
+    };
+
+    /**
+     * List candidate starters for a process-definition
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getCandidateStarters = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/identitylinks`,
+            getRequestArgs());
+    };
+
+    /**
+     * Add a candidate starter to a process definition
+     * @param processDefinitionId
+     * @param restIdentityLink
+     * @example {
+          "data": [
+            {
+              "id": "187",
+              "url": "http://localhost:8182/repository/process-definitions/processOne%3A1%3A4",
+              "businessKey": "myBusinessKey",
+              "suspended": true,
+              "ended": true,
+              "processDefinitionId": "oneTaskProcess:1:158",
+              "processDefinitionUrl": "http://localhost:8182/repository/process-definitions/processOne%3A1%3A4",
+              "activityId": "processTask",
+              "variables": [
+                {
+                  "name": "myVariable",
+                  "type": "string",
+                  "value": "test",
+                  "valueUrl": "http://....",
+                  "scope": "string"
+                }
+              ],
+              "tenantId": "null",
+              "completed": true
+            }
+          ],
+          "total": 0,
+          "start": 0,
+          "sort": "string",
+          "order": "string",
+          "size": 0
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.addCandidateStarter = (processDefinitionId, restIdentityLink) => {
+        return http.post(resourcePath + `/${processDefinitionId}/identitylinks`, restIdentityLink,
+            getRequestArgs());
+    };
+
+    /**
+     * Delete a candidate starter from a process definition
+     * @param processDefinitionId
+     * @param family
+     * @param identityId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.deleteCandidateStarter = (processDefinitionId, family, identityId) => {
+        return http.delete(resourcePath + `/${processDefinitionId}/identitylinks/${family}/${identityId}`,
+            getRequestArgs());
+    };
+
+    /**
+     * Get a candidate starter from a process definition
+     * @param processDefinitionId
+     * @param family
+     * @param identityId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getCandidateStarter = (processDefinitionId, family, identityId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/identitylinks/${family}/${identityId}`,
+            getRequestArgs());
+    };
+
+    /**
+     * Get a process definition image
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getImage = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/image`,
+            getRequestArgs());
+    };
+
+    /**
+     * Get a process definition BPMN model
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getModel = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/model`,
+            getRequestArgs());
+    };
+
+    /**
+     * Get a process definition resource content
+     * @param processDefinitionId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getResourceData = (processDefinitionId) => {
+        return http.get(resourcePath + `/${processDefinitionId}/resourcedata`,
+            getRequestArgs());
+    };
+
+}
+
+
+///////////////////
+
+function getRequestArgs(queryParams, data) {
+    const args = {};
+    queryParams ? args.params = queryParams : undefined;
+    data ? args.data = data : undefined;
+    return args;
+}
+
+module.exports = ProcessDefinitionsResource;
+},{}],3:[function(require,module,exports){
+'use strict';
+
+const resourcePath = '/runtime/process-instances';
+const queryResourcePath = '/query/process-instances';
+
+function ProcessInstancesResource(options, http) {
+
+    /**
+     * Query process instances
+     * @param processInstanceQueryRequest
+     * @example {
+          "start": 0,
+          "size": 0,
+          "sort": "string",
+          "order": "string",
+          "processInstanceId": "string",
+          "processBusinessKey": "string",
+          "processDefinitionId": "string",
+          "processDefinitionKey": "string",
+          "superProcessInstanceId": "string",
+          "subProcessInstanceId": "string",
+          "excludeSubprocesses": true,
+          "involvedUser": "string",
+          "suspended": true,
+          "includeProcessVariables": true,
+          "variables": [
+            {
+              "name": "string",
+              "operation": "string",
+              "value": {},
+              "type": "string",
+              "variableOperation": "EQUALS"
+            }
+          ],
+          "tenantId": "string",
+          "tenantIdLike": "string",
+          "withoutTenantId": true
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.queryProcessInstances = (processInstanceQueryRequest) => {
+       return http.post(queryResourcePath, processInstanceQueryRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * List process instances
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getProcessInstances = (queryParams) => {
+        return http.get(resourcePath,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Start a process instance
+     * @param processInstanceCreateRequest
+     * @example {
+          "processDefinitionId": "oneTaskProcess:1:158",
+          "processDefinitionKey": "oneTaskProcess",
+          "message": "newOrderMessage",
+          "businessKey": "myBusinessKey",
+          "variables": [
+            {
+              "name": "myVariable",
+              "type": "string",
+              "value": "test",
+              "valueUrl": "http://....",
+              "scope": "string"
+            }
+          ],
+          "transientVariables": [
+            {
+              "name": "myVariable",
+              "type": "string",
+              "value": "test",
+              "valueUrl": "http://....",
+              "scope": "string"
+            }
+          ],
+          "tenantId": "tenant1",
+          "returnVariables": true
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.startProcessInstance = (processInstanceCreateRequest) => {
+        return http.post(resourcePath, processInstanceCreateRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Delete a process instance
+     * @param processInstanceId
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.deleteProcessInstance = (processInstanceId, queryParams) => {
+        return http.delete(resourcePath + `/${processInstanceId}`,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Get a process instance
+     * @param processInstanceId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getProcessInstance = (processInstanceId) => {
+        return http.get(resourcePath + `/${processInstanceId}`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Activate or suspend a process instance
+     * @param processInstanceId
+     * @param processInstanceActionRequest
+     * @example {
+          "action": "activate"
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.executeAction = (processInstanceId, processInstanceActionRequest) => {
+        return http.put(resourcePath + `/${processInstanceId}`, processInstanceActionRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Change the state of a process instance
+     * @param processInstanceId
+     * @param executionChangeActivityStateRequest
+     * @example {
+          "cancelActivityIds": [
+            "string"
+          ],
+          "startActivityIds": [
+            "string"
+          ]
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.changeState = (processInstanceId, executionChangeActivityStateRequest) => {
+        return http.post(resourcePath + `/${processInstanceId}/change-state`, executionChangeActivityStateRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Get diagram for a process instance
+     * @param processInstanceId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getDiagram = (processInstanceId) => {
+        return http.get(resourcePath + `/${processInstanceId}/diagram`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Inject activity in a process instance
+     * @param processInstanceId
+     * @param injectActivityRequest
+     * @example {
+          "injectionType": "string",
+          "id": "string",
+          "name": "string",
+          "assignee": "string",
+          "taskId": "string",
+          "processDefinitionId": "string",
+          "joinParallelActivitiesOnComplete": true
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.injectActivity = (processInstanceId, injectActivityRequest) => {
+        return http.post(resourcePath + `/${processInstanceId}/inject`, injectActivityRequest,
+            getRequestArgs()
+        );
+    };
+
+}
+
+
+///////////////////
+
+function getRequestArgs(queryParams, data) {
+    const args = {};
+    queryParams ? args.params = queryParams : undefined;
+    data ? args.data = data : undefined;
+    return args;
+}
+
+module.exports = ProcessInstancesResource;
+},{}],4:[function(require,module,exports){
+'use strict';
+
+const resourcePath = '/runtime/tasks';
+
+function TaskVariablesResource(options, http) {
+
+    /**
+     * List variables for a task
+     * @param taskId
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getVariables = (taskId, queryParams) => {
+        return http.get(resourcePath + `/${taskId}/variables`,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Create new variables on a task
+     * @param taskId
+     * @param taskVariableCollectionResource
+     * @example [{
+        "name" : "variableName",
+        "type": "integer",
+        "scope": "local"
+        }]
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.createVariables = (taskId, taskVariableCollectionResource) => {
+        return http.post(resourcePath + `/${taskId}/variables`, taskVariableCollectionResource,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Delete a variable on a task
+     * @param taskId
+     * @param variableName
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.deleteVariable = (taskId, variableName, queryParams) => {
+        return http.delete(resourcePath + `/${taskId}/variables/${variableName}`,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Get a variable from a task
+     * @param taskId
+     * @param variableName
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getVariable = (taskId, variableName, queryParams) => {
+        return http.get(resourcePath + `/${taskId}/variables/${variableName}`,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Update an existing variable on a task
+     * @param taskId
+     * @param variableName
+     * @param taskVariableResource
+     * @example {
+        "name" : "variableName",
+        "type": "integer",
+        "scope": "local"
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.updateVariable = (taskId, variableName, taskVariableResource) => {
+        return http.put(resourcePath + `${taskId}/variables/${variableName}`, taskVariableResource,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Get the binary data for a variable
+     * @param taskId
+     * @param variableName
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getBinaryData = (taskId, variableName, queryParams) => {
+        return http.get(resourcePath + `/${taskId}/variables/${variableName}/data`,
+            getRequestArgs(queryParams)
+        );
+    };
+
+}
+
+
+///////////////////
+
+function getRequestArgs(queryParams, data) {
+    const args = {};
+    queryParams ? args.params = queryParams : undefined;
+    data ? args.data = data : undefined;
+    return args;
+}
+
+module.exports = TaskVariablesResource;
+},{}],5:[function(require,module,exports){
+'use strict';
+
+const resourcePath = '/runtime/tasks';
+const queryResourcePath = '/query/tasks';
+
+function TasksResource(options, http) {
+
+    /**
+     * Query tasks
+     * @param taskQueryRequest
+     * @example {
+          "start": 0,
+          "size": 0,
+          "sort": "string",
+          "order": "string",
+          "name": "string",
+          "nameLike": "string",
+          "description": "string",
+          "descriptionLike": "string",
+          "priority": 0,
+          "minimumPriority": 0,
+          "maximumPriority": 0,
+          "assignee": "string",
+          "assigneeLike": "string",
+          "owner": "string",
+          "ownerLike": "string",
+          "unassigned": true,
+          "delegationState": "string",
+          "candidateUser": "string",
+          "candidateGroup": "string",
+          "candidateGroupIn": [
+            "string"
+          ],
+          "involvedUser": "string",
+          "processInstanceId": "string",
+          "processInstanceBusinessKey": "string",
+          "processInstanceBusinessKeyLike": "string",
+          "processDefinitionId": "string",
+          "processDefinitionKey": "string",
+          "processDefinitionName": "string",
+          "processDefinitionKeyLike": "string",
+          "processDefinitionNameLike": "string",
+          "executionId": "string",
+          "createdOn": "2018-06-14T13:24:45.733Z",
+          "createdBefore": "2018-06-14T13:24:45.733Z",
+          "createdAfter": "2018-06-14T13:24:45.733Z",
+          "excludeSubTasks": true,
+          "taskDefinitionKey": "string",
+          "taskDefinitionKeyLike": "string",
+          "dueDate": "2018-06-14T13:24:45.733Z",
+          "dueBefore": "2018-06-14T13:24:45.733Z",
+          "dueAfter": "2018-06-14T13:24:45.733Z",
+          "withoutDueDate": true,
+          "active": true,
+          "includeTaskLocalVariables": true,
+          "includeProcessVariables": true,
+          "tenantId": "string",
+          "tenantIdLike": "string",
+          "withoutTenantId": true,
+          "candidateOrAssigned": "string",
+          "category": "string",
+          "taskVariables": [
+            {
+              "name": "string",
+              "operation": "string",
+              "value": {},
+              "type": "string",
+              "variableOperation": "EQUALS"
+            }
+          ],
+          "processInstanceVariables": [
+            {
+              "name": "string",
+              "operation": "string",
+              "value": {},
+              "type": "string",
+              "variableOperation": "EQUALS"
+            }
+          ]
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.queryTasks = (taskQueryRequest) => {
+        return http.post(queryResourcePath, taskQueryRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * List tasks
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getTasks = (queryParams) => {
+        return http.get(resourcePath,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Create a task
+     * @param taskCreateRequest
+     * @example {
+          "owner": "string",
+          "assignee": "string",
+          "delegationState": "string",
+          "name": "string",
+          "description": "string",
+          "dueDate": "2018-06-14T13:24:45.765Z",
+          "priority": 0,
+          "parentTaskId": "string",
+          "category": "string",
+          "tenantId": "string",
+          "formKey": "string",
+          "ownerSet": true,
+          "assigneeSet": true,
+          "delegationStateSet": true,
+          "nameSet": true,
+          "descriptionSet": true,
+          "duedateSet": true,
+          "prioritySet": true,
+          "parentTaskIdSet": true,
+          "categorySet": true,
+          "tenantIdSet": true,
+          "formKeySet": true
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.createTask = (taskCreateRequest) => {
+        return http.post(resourcePath, taskCreateRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Delete a task
+     * @param taskId
+     * @param queryParams
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.deleteTask = (taskId, queryParams) => {
+        return http.delete(resourcePath + `/${taskId}`,
+            getRequestArgs(queryParams)
+        );
+    };
+
+    /**
+     * Get a task
+     * @param taskId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getTask = (taskId) => {
+        return http.get(resourcePath + `/${taskId}`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Execute an action on a task
+     * @param taskId
+     * @param taskActionRequest
+     * @example {
+          "action": "complete",
+          "assignee": "userWhoClaims/userToDelegateTo",
+          "variables": [
+            {
+              "name": "myVariable",
+              "type": "string",
+              "value": "test",
+              "valueUrl": "http://....",
+              "scope": "string"
+            }
+          ],
+          "transientVariables": [
+            {
+              "name": "myVariable",
+              "type": "string",
+              "value": "test",
+              "valueUrl": "http://....",
+              "scope": "string"
+            }
+          ]
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.executeAction = (taskId, taskActionRequest) => {
+        return http.post(resourcePath + `/${taskId}`, taskActionRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Update a task
+     * @param taskId
+     * @param taskRequest
+     * @example {
+          "owner": "string",
+          "assignee": "string",
+          "delegationState": "string",
+          "name": "string",
+          "description": "string",
+          "dueDate": "2018-06-14T13:24:45.783Z",
+          "priority": 0,
+          "parentTaskId": "string",
+          "category": "string",
+          "tenantId": "string",
+          "formKey": "string",
+          "ownerSet": true,
+          "assigneeSet": true,
+          "delegationStateSet": true,
+          "nameSet": true,
+          "descriptionSet": true,
+          "duedateSet": true,
+          "prioritySet": true,
+          "parentTaskIdSet": true,
+          "categorySet": true,
+          "tenantIdSet": true,
+          "formKeySet": true
+        }
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.updateTask = (taskId, taskRequest) => {
+        return http.put(resourcePath + `/${taskId}`, taskRequest,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * List events for a task
+     * @param taskId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getTask = (taskId) => {
+        return http.get(resourcePath + `/${taskId}/events`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Delete an event on a task
+     * @param taskId
+     * @param eventId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.deleteEvent = (taskId, eventId) => {
+        return http.delete(resourcePath + `/${taskId}/events/${eventId}`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Get an event on a task
+     * @param taskId
+     * @param eventId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getEvent = (taskId, eventId) => {
+        return http.get(resourcePath + `/${taskId}/events/${eventId}`,
+            getRequestArgs()
+        );
+    };
+
+
+    /**
+     * List of sub tasks for a task
+     * @param taskId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.getSubTasks = (taskId) => {
+        return http.get(resourcePath + `/${taskId}/subtasks`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Delete all local variables on a task
+     * @param taskId
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.deleteVariables = (taskId) => {
+        return http.delete(resourcePath + `/${taskId}/variables`,
+            getRequestArgs()
+        );
+    };
+
+    /**
+     * Create new variables on a task
+     * @param taskId
+     * @param taskVariableCollectionResource
+     * @example [{
+        "name" : "variableName",
+        "type": "integer",
+        "scope": "local"
+        }]
+     * @returns {AxiosPromise<any> | *}
+     */
+    this.createVariables = (taskId, taskVariableCollectionResource) => {
+        return http.post(resourcePath + `/${taskId}/variables`, taskVariableCollectionResource,
+            getRequestArgs()
+        );
     };
 }
 
@@ -76,36 +830,10 @@ function getRequestArgs(queryParams, data) {
     return args;
 }
 
-function validateParameters(params, validParams) {
-    for (let param in params) {
-        if (params.hasOwnProperty(param)) {
-            if (validParams.indexOf(param) === -1) {
-                return
-            }
-        }
-    }
-}
-
-function getRequestHeaders() {
-    return {
-        headers: {'content-type': 'application/json'},
-        withCredentials: true
-    }
-}
-
-function handleResponse(data, response, done) {
-    if (response.statusCode === 200) {
-        done(null, data)
-    } else {
-        done(response, null);
-    }
-}
-
-
-module.exports = ProcessDefinitionsResource;
-},{}],3:[function(require,module,exports){
+module.exports = TasksResource;
+},{}],6:[function(require,module,exports){
 module.exports = require('./lib/axios');
-},{"./lib/axios":5}],4:[function(require,module,exports){
+},{"./lib/axios":8}],7:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -289,7 +1017,7 @@ module.exports = function xhrAdapter(config) {
 };
 
 }).call(this,require('_process'))
-},{"../core/createError":11,"./../core/settle":14,"./../helpers/btoa":18,"./../helpers/buildURL":19,"./../helpers/cookies":21,"./../helpers/isURLSameOrigin":23,"./../helpers/parseHeaders":25,"./../utils":27,"_process":29}],5:[function(require,module,exports){
+},{"../core/createError":14,"./../core/settle":17,"./../helpers/btoa":21,"./../helpers/buildURL":22,"./../helpers/cookies":24,"./../helpers/isURLSameOrigin":26,"./../helpers/parseHeaders":28,"./../utils":30,"_process":32}],8:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -343,7 +1071,7 @@ module.exports = axios;
 // Allow use of default import syntax in TypeScript
 module.exports.default = axios;
 
-},{"./cancel/Cancel":6,"./cancel/CancelToken":7,"./cancel/isCancel":8,"./core/Axios":9,"./defaults":16,"./helpers/bind":17,"./helpers/spread":26,"./utils":27}],6:[function(require,module,exports){
+},{"./cancel/Cancel":9,"./cancel/CancelToken":10,"./cancel/isCancel":11,"./core/Axios":12,"./defaults":19,"./helpers/bind":20,"./helpers/spread":29,"./utils":30}],9:[function(require,module,exports){
 'use strict';
 
 /**
@@ -364,7 +1092,7 @@ Cancel.prototype.__CANCEL__ = true;
 
 module.exports = Cancel;
 
-},{}],7:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var Cancel = require('./Cancel');
@@ -423,14 +1151,14 @@ CancelToken.source = function source() {
 
 module.exports = CancelToken;
 
-},{"./Cancel":6}],8:[function(require,module,exports){
+},{"./Cancel":9}],11:[function(require,module,exports){
 'use strict';
 
 module.exports = function isCancel(value) {
   return !!(value && value.__CANCEL__);
 };
 
-},{}],9:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 var defaults = require('./../defaults');
@@ -511,7 +1239,7 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 
 module.exports = Axios;
 
-},{"./../defaults":16,"./../utils":27,"./InterceptorManager":10,"./dispatchRequest":12}],10:[function(require,module,exports){
+},{"./../defaults":19,"./../utils":30,"./InterceptorManager":13,"./dispatchRequest":15}],13:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -565,7 +1293,7 @@ InterceptorManager.prototype.forEach = function forEach(fn) {
 
 module.exports = InterceptorManager;
 
-},{"./../utils":27}],11:[function(require,module,exports){
+},{"./../utils":30}],14:[function(require,module,exports){
 'use strict';
 
 var enhanceError = require('./enhanceError');
@@ -585,7 +1313,7 @@ module.exports = function createError(message, config, code, request, response) 
   return enhanceError(error, config, code, request, response);
 };
 
-},{"./enhanceError":13}],12:[function(require,module,exports){
+},{"./enhanceError":16}],15:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -673,7 +1401,7 @@ module.exports = function dispatchRequest(config) {
   });
 };
 
-},{"../cancel/isCancel":8,"../defaults":16,"./../helpers/combineURLs":20,"./../helpers/isAbsoluteURL":22,"./../utils":27,"./transformData":15}],13:[function(require,module,exports){
+},{"../cancel/isCancel":11,"../defaults":19,"./../helpers/combineURLs":23,"./../helpers/isAbsoluteURL":25,"./../utils":30,"./transformData":18}],16:[function(require,module,exports){
 'use strict';
 
 /**
@@ -696,7 +1424,7 @@ module.exports = function enhanceError(error, config, code, request, response) {
   return error;
 };
 
-},{}],14:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 var createError = require('./createError');
@@ -724,7 +1452,7 @@ module.exports = function settle(resolve, reject, response) {
   }
 };
 
-},{"./createError":11}],15:[function(require,module,exports){
+},{"./createError":14}],18:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -746,7 +1474,7 @@ module.exports = function transformData(data, headers, fns) {
   return data;
 };
 
-},{"./../utils":27}],16:[function(require,module,exports){
+},{"./../utils":30}],19:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -846,7 +1574,7 @@ utils.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
 module.exports = defaults;
 
 }).call(this,require('_process'))
-},{"./adapters/http":4,"./adapters/xhr":4,"./helpers/normalizeHeaderName":24,"./utils":27,"_process":29}],17:[function(require,module,exports){
+},{"./adapters/http":7,"./adapters/xhr":7,"./helpers/normalizeHeaderName":27,"./utils":30,"_process":32}],20:[function(require,module,exports){
 'use strict';
 
 module.exports = function bind(fn, thisArg) {
@@ -859,7 +1587,7 @@ module.exports = function bind(fn, thisArg) {
   };
 };
 
-},{}],18:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 // btoa polyfill for IE<10 courtesy https://github.com/davidchambers/Base64.js
@@ -897,7 +1625,7 @@ function btoa(input) {
 
 module.exports = btoa;
 
-},{}],19:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -965,7 +1693,7 @@ module.exports = function buildURL(url, params, paramsSerializer) {
   return url;
 };
 
-},{"./../utils":27}],20:[function(require,module,exports){
+},{"./../utils":30}],23:[function(require,module,exports){
 'use strict';
 
 /**
@@ -981,7 +1709,7 @@ module.exports = function combineURLs(baseURL, relativeURL) {
     : baseURL;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1036,7 +1764,7 @@ module.exports = (
   })()
 );
 
-},{"./../utils":27}],22:[function(require,module,exports){
+},{"./../utils":30}],25:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1052,7 +1780,7 @@ module.exports = function isAbsoluteURL(url) {
   return /^([a-z][a-z\d\+\-\.]*:)?\/\//i.test(url);
 };
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1122,7 +1850,7 @@ module.exports = (
   })()
 );
 
-},{"./../utils":27}],24:[function(require,module,exports){
+},{"./../utils":30}],27:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -1136,7 +1864,7 @@ module.exports = function normalizeHeaderName(headers, normalizedName) {
   });
 };
 
-},{"../utils":27}],25:[function(require,module,exports){
+},{"../utils":30}],28:[function(require,module,exports){
 'use strict';
 
 var utils = require('./../utils');
@@ -1191,7 +1919,7 @@ module.exports = function parseHeaders(headers) {
   return parsed;
 };
 
-},{"./../utils":27}],26:[function(require,module,exports){
+},{"./../utils":30}],29:[function(require,module,exports){
 'use strict';
 
 /**
@@ -1220,7 +1948,7 @@ module.exports = function spread(callback) {
   };
 };
 
-},{}],27:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 
 var bind = require('./helpers/bind');
@@ -1525,7 +2253,7 @@ module.exports = {
   trim: trim
 };
 
-},{"./helpers/bind":17,"is-buffer":28}],28:[function(require,module,exports){
+},{"./helpers/bind":20,"is-buffer":31}],31:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -1548,7 +2276,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],29:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
