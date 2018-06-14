@@ -1,0 +1,30 @@
+{
+  "name": "flowable-js-api",
+  "version": "1.0.0",
+  "description": "A wrapper for the Flowable REST API to conveniently use Flowable in any node application.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/99999989/flowable-js-api.git"
+  },
+  "keywords": [
+    "flowable",
+    "js",
+    "rest",
+    "api"
+  ],
+  "dependencies": {
+    "axios": "^0.18.0",
+    "debug": "^3.1.0",
+    "node-rest-client": "^3.1.0"
+  },
+  "author": "Sven Heinrich",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/99999989/flowable-js-api/issues"
+  },
+  "homepage": "https://github.com/99999989/flowable-js-api#readme"
+}
